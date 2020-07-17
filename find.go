@@ -131,8 +131,7 @@ func (o *statefulFileWalker) fileWalkFunc(filePath string, info os.FileInfo, err
 		return err
 	}
 
-	parentDirPath := filepath.Dir(filePath)
-	if !o.config.Recursive && parentDirPath != o.absTargetDirPath {
+	if !o.config.Recursive && info.IsDir() && filePath != o.absTargetDirPath {
 		return filepath.SkipDir
 	}
 
@@ -162,7 +161,7 @@ func (o *statefulFileWalker) fileWalkFunc(filePath string, info os.FileInfo, err
 	return o.config.FoundFileFn(StatefulFileInfo{
 		AlreadySeen:      hasBeenSeen,
 		FilePath:         filePath,
-		ParentDirPath:    parentDirPath,
+		ParentDirPath:    filepath.Dir(filePath),
 		Hash:             fileHash,
 		Info:             info,
 		AbsSearchDirPath: o.absTargetDirPath,

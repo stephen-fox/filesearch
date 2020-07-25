@@ -147,14 +147,14 @@ func (o *statefulFileWalker) fileWalkFunc(filePath string, info os.FileInfo, err
 	var hasBeenSeen bool
 	var fileHash string
 	if !o.config.AllowDupes {
-		fileHashStr, err := hashFile(filePath, o.config.pickHasher())
+		fileHash, err = hashFile(filePath, o.config.pickHasher())
 		if err != nil {
 			return fmt.Errorf("failed to hash file '%s' - %w", filePath, err)
 		}
 
-		_, hasBeenSeen = o.fileHashesToWhatever[fileHashStr]
+		_, hasBeenSeen = o.fileHashesToWhatever[fileHash]
 		if !hasBeenSeen {
-			o.fileHashesToWhatever[fileHashStr] = struct{}{}
+			o.fileHashesToWhatever[fileHash] = struct{}{}
 		}
 	}
 

@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // FindUniqueFilesConfig configures a FindUniqueFiles function.
@@ -67,6 +68,11 @@ type StatefulFileInfo struct {
 	// FilePath is the absolute file path of the file.
 	FilePath string
 
+	// PreviousFilePath is the file path where the file has been
+	// previously encountered. If the file has not been previously
+	// encountered, then this is an empty string.
+	PreviousFilePath string
+
 	// ParentDirPath is the parent directory of the file.
 	ParentDirPath string
 
@@ -110,14 +116,14 @@ func newFileWalker(config FindUniqueFilesConfig) (*statefulFileWalker, error) {
 
 	return &statefulFileWalker{
 		absTargetDirPath:     absTargetDirPath,
-		fileHashesToWhatever: make(map[string]struct{}),
+		fileHashesToPrevious: make(map[string]string),
 		config:               config,
 	}, nil
 }
 
 type statefulFileWalker struct {
 	absTargetDirPath     string
-	fileHashesToWhatever map[string]struct{}
+	fileHashesToPrevious map[string]string
 	config               FindUniqueFilesConfig
 }
 
@@ -146,20 +152,22 @@ func (o *statefulFileWalker) fileWalkFunc(filePath string, info os.FileInfo, err
 
 	var hasBeenSeen bool
 	var fileHash string
+	var previousFilePath string
 	if !o.config.AllowDupes {
 		fileHash, err = hashFile(filePath, o.config.pickHasher())
 		if err != nil {
 			return fmt.Errorf("failed to hash file '%s' - %w", filePath, err)
 		}
 
-		_, hasBeenSeen = o.fileHashesToWhatever[fileHash]
+		previousFilePath, hasBeenSeen = o.fileHashesToPrevious[fileHash]
 		if !hasBeenSeen {
-			o.fileHashesToWhatever[fileHash] = struct{}{}
+			o.fileHashesToPrevious[fileHash] = strings.TrimPrefix(filePath, o.absTargetDirPath)
 		}
 	}
 
 	return o.config.FoundFileFn(StatefulFileInfo{
 		AlreadySeen:      hasBeenSeen,
+		PreviousFilePath: previousFilePath,
 		FilePath:         filePath,
 		ParentDirPath:    filepath.Dir(filePath),
 		Hash:             fileHash,
